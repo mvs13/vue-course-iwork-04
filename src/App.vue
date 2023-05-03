@@ -23,16 +23,38 @@
       </div>
     </form>
     
-    <div v-for="todo in todos" :key="todo.id" class="card mb-5">
+    <!-- 
+      Использование :class позволит добавлять форматирование, описанное классом has-background-success-light,
+      при условии, что элемент списка todos, будет помечен, как выполненный todo.done: true 
+    -->
+    <div
+      v-for="todo in todos" :key="todo.id"
+      class="card mb-5"
+      :class="{'has-background-success-light':todo.done}"
+      >
       <div class="card-content">
         <div class="content">
           <div class="columns is-mobile is-vcentered">
-            <div class="column">
+            <div
+              class="column"
+              :class="{'has-text-success line-through' : todo.done}"
+              >
               {{ todo.content }}
             </div>
             <div class="column is-5 has-text-right">
-              <button class="button is-light">&check;</button>
-              <button class="button is-danger ml-2">&cross;</button>
+              <button
+                class="button is-light"
+                :class="todo.done ? 'is-success' : 'is-light'"
+                @click="toggleDone(todo.id)"
+                >
+                  &check;
+                </button>
+              <button
+                @click="deleteTodo(todo.id)"
+                class="button is-danger ml-2"
+                >
+                &cross;
+              </button>
             </div>
           </div>
         </div>
@@ -46,18 +68,7 @@
 import {ref} from 'vue'
 import { v4 as uuidv4 } from 'uuid';
 // todo
-const todos = ref([
-  // {
-  //   id: 'id01',
-  //   content: 'Make fist card',
-  //   done: false
-  // },
-  // {
-  //   id: 'id02',
-  //   content: 'Make cards list',
-  //   done: false
-  // }
-]);
+const todos = ref([]);
 
 // add todo
 const newTodoContenet = ref('')
@@ -72,6 +83,25 @@ const addTodo = () => {
   newTodoContenet.value = ''
   // console.log(newTodo)
 }
+
+// delete Todo
+const deleteTodo = (id) => {
+  todos.value = todos.value.filter((todo) => todo.id !== id)
+  // console.log(id)
+}
+
+//toggle done for todo
+const toggleDone = (id) => {
+  const index4Toggle = todos.value.findIndex(todo => todo.id === id )
+  // можно просто инвертировать не выполняя дополнительной проверки при помощи if
+  todos.value[index4Toggle].done = !todos.value[index4Toggle].done
+  // if (todos.value[index4Toggle].done){
+  //   todos.value[index4Toggle].done = false  
+  // }else{
+  //   todos.value[index4Toggle].done = true  
+  // }
+  // console.log(id)
+}
 </script>
 
 <style>
@@ -80,5 +110,8 @@ const addTodo = () => {
   max-width: 400px;
   padding: 20px;
   margin: 0 auto;
+}
+.line-through {
+  text-decoration: line-through;
 }
 </style>
