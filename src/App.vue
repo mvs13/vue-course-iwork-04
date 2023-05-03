@@ -43,7 +43,7 @@
             </div>
             <div class="column is-5 has-text-right">
               <button
-                class="button is-light"
+                class="button"
                 :class="todo.done ? 'is-success' : 'is-light'"
                 @click="toggleDone(todo.id)"
                 >
@@ -65,36 +65,47 @@
 
 <script setup>
 // import
-import {ref} from 'vue'
-import { v4 as uuidv4 } from 'uuid';
+// из Vue берём работу с реактивными данными, обработчик события жизненного цикла onMounted
+import {ref, onMounted} from 'vue'
+// @ - обращение к модулям, определённым внутри папки src
+import { supabase } from '@/database'
 // todo
 const todos = ref([]);
 
 // add todo
 const newTodoContenet = ref('')
 
-const addTodo = () => {
-  const newTodo = {
-    id: uuidv4(),
-    content: newTodoContenet.value,
-    done: false
-  }
-  todos.value.unshift(newTodo)
+async function addTodo() {
+  const { data, error } = await supabase
+    .from('todos')
+    .insert([
+      {
+        content: newTodoContenet.value,
+        done: false
+      },
+    ])
   newTodoContenet.value = ''
-  // console.log(newTodo)
 }
 
 // delete Todo
-const deleteTodo = (id) => {
-  todos.value = todos.value.filter((todo) => todo.id !== id)
-  // console.log(id)
+async function deleteTodo(id) {
+  const { data, error } = await supabase
+    .from('todos')
+    .delete()
+    .eq('id', id)
 }
 
 //toggle done for todo
-const toggleDone = (id) => {
+async function toggleDone(id) {
   const index4Toggle = todos.value.findIndex(todo => todo.id === id )
+  const { data, error } = await supabase
+    .from('todos')
+    .update({ done: !todos.value[index4Toggle].done })
+    .eq('id', id)
+
+  // const index4Toggle = todos.value.findIndex(todo => todo.id === id )
   // можно просто инвертировать не выполняя дополнительной проверки при помощи if
-  todos.value[index4Toggle].done = !todos.value[index4Toggle].done
+  // todos.value[index4Toggle].done = !todos.value[index4Toggle].done
   // if (todos.value[index4Toggle].done){
   //   todos.value[index4Toggle].done = false  
   // }else{
@@ -102,6 +113,40 @@ const toggleDone = (id) => {
   // }
   // console.log(id)
 }
+
+async function getTodos() {
+  // https://egaeiimprrzelsjvoevf.supabase.co/rest/v1/todos?select=*&apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnYWVpaW1wcnJ6ZWxzanZvZXZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODMwNTA3MTMsImV4cCI6MTk5ODYyNjcxM30.NKLq2EHkDH49qYEL1rKR8ZNudW4Z2LS4Nbi30jLCweo
+  // Не забыть настроить доступ по чтению к таблице для анонимных пользователей
+  const { data } = await supabase
+    .from('todos')
+    .select('*')
+    .order('id', { ascending: false })
+  todos.value = data
+}
+
+function subscribeOnTodosEvents() {
+  const channel = supabase
+    .channel('schema-db-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'todos'
+      },
+      (payload) => getTodos()
+    )
+    .subscribe((status) => {
+      // let statusDate = new Date()
+      // console.log('Status is : ' + status +'('+statusDate.toUTCString()+')')
+    })
+}
+
+onMounted(() => {
+  getTodos()
+  subscribeOnTodosEvents()
+})
+
 </script>
 
 <style>
